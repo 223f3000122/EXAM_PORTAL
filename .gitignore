@@ -1,0 +1,20 @@
+# Python / Virtual Environment
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+env/
+
+# Database
+*.db
+*.sqlite3
+
+# Node / Vue
+node_modules/
+npm-debug.log*
+
+# Redis & Celery
+*.dump.rdb
+celerybeat-schedule*
+.DS_Store
