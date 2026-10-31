@@ -3,80 +3,171 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Examination Management Portal</title>
-    <!-- Bootstrap CSS -->
+    <title>Examination Portal</title>
+    <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Vue 3 -->
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+
+    <style>
+        :root {
+            --app-bg: #F4F6F8;
+            --brand-primary: #4F6D7A;
+            --brand-primary-dark: #3E5661;
+            --card-border: #E5E9EC;
+            --accent-green: #5E8B7E;
+            --accent-green-dark: #4D7267;
+            --accent-slate: #475569;
+        }
+
+        body {
+            background-color: var(--app-bg);
+            color: #334155;
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        }
+
+        /* Top Navigation */
+        .portal-navbar {
+            background-color: var(--brand-primary);
+        }
+
+        /* Clean Card Styling */
+        .portal-card {
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            background: #ffffff;
+        }
+
+        .portal-card-header {
+            border-bottom: 1px solid var(--card-border);
+            font-weight: 600;
+            padding: 12px 18px;
+        }
+
+        /* Soft Header Variations */
+        .header-slate {
+            background-color: var(--accent-slate);
+            color: #ffffff;
+        }
+
+        .header-sage {
+            background-color: var(--accent-green);
+            color: #ffffff;
+        }
+
+        /* Soft Buttons */
+        .btn-portal-primary {
+            background-color: var(--brand-primary);
+            border-color: var(--brand-primary);
+            color: #ffffff;
+        }
+        .btn-portal-primary:hover {
+            background-color: var(--brand-primary-dark);
+            border-color: var(--brand-primary-dark);
+            color: #ffffff;
+        }
+
+        .btn-portal-sage {
+            background-color: var(--accent-green);
+            border-color: var(--accent-green);
+            color: #ffffff;
+        }
+        .btn-portal-sage:hover {
+            background-color: var(--accent-green-dark);
+            border-color: var(--accent-green-dark);
+            color: #ffffff;
+        }
+
+        /* Stat Badges */
+        .stat-card {
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            background: #ffffff;
+            transition: transform 0.15s ease-in-out;
+        }
+        .stat-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .nav-pills .nav-link {
+            color: #64748B;
+            font-weight: 500;
+        }
+        .nav-pills .nav-link.active {
+            background-color: var(--brand-primary);
+            color: #ffffff;
+        }
+    </style>
 </head>
-<body class="bg-light">
+<body>
+    {% raw %}
     <div id="app">
         <!-- Top Navigation -->
-        <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm mb-4">
+        <nav class="navbar navbar-expand-lg navbar-dark portal-navbar shadow-sm mb-4">
             <div class="container">
-                <a class="navbar-brand fw-bold" href="#">Exam Portal</a>
+                <a class="navbar-brand fw-semibold letter-spacing-1" href="#">Examination Portal</a>
                 <div class="d-flex align-items-center" v-if="currentUser">
-                    <span class="navbar-text text-white me-3">
-                        Hi, <strong>{{ currentUser.name }}</strong> ({{ currentUser.role }})
+                    <span class="navbar-text text-white me-3 small">
+                        Signed in as <strong>{{ currentUser.name }}</strong> ({{ currentUser.role }})
                     </span>
-                    <button class="btn btn-outline-light btn-sm" @click="logout">Logout</button>
+                    <button class="btn btn-outline-light btn-sm px-3" @click="logout">Logout</button>
                 </div>
             </div>
         </nav>
 
         <div class="container">
-            <!-- Feedback notifications -->
-            <div v-if="alertMessage" :class="['alert', 'alert-' + alertType, 'alert-dismissible', 'fade', 'show']" role="alert">
+            <!-- Global Flash Notification -->
+            <div v-if="alertMessage" :class="['alert', 'alert-' + alertType, 'alert-dismissible', 'fade', 'show', 'shadow-sm']" role="alert">
                 {{ alertMessage }}
                 <button type="button" class="btn-close" @click="alertMessage = ''"></button>
             </div>
 
-            <!-- Auth Forms (Login / Register) -->
-            <div v-if="!currentUser" class="row justify-content-center mt-5">
-                <!-- Login section -->
+            <!-- VIEW 1: AUTHENTICATION -->
+            <div v-if="!currentUser" class="row justify-content-center mt-4">
+                <!-- Login Box -->
                 <div class="col-md-5 mb-4">
-                    <div class="card shadow-sm border-0">
-                        <div class="card-header bg-dark text-white fw-semibold">Sign In</div>
+                    <div class="portal-card shadow-sm">
+                        <div class="portal-card-header header-slate">Sign In</div>
                         <div class="card-body p-4">
                             <form @submit.prevent="handleLogin">
                                 <div class="mb-3">
-                                    <label class="form-label">Email address</label>
-                                    <input type="email" class="form-control" v-model="loginForm.email" required placeholder="name@example.com">
+                                    <label class="form-label text-muted small fw-semibold">Email address</label>
+                                    <input type="email" class="form-control" v-model="loginForm.email" required placeholder="admin@examportal.com">
                                 </div>
                                 <div class="mb-3">
-                                    <label class="form-label">Password</label>
+                                    <label class="form-label text-muted small fw-semibold">Password</label>
                                     <input type="password" class="form-control" v-model="loginForm.password" required placeholder="••••••••">
                                 </div>
-                                <button type="submit" class="btn btn-primary w-100" :disabled="loading">
-                                    {{ loading ? 'Checking credentials...' : 'Login' }}
+                                <button type="submit" class="btn btn-portal-primary w-100 mt-2" :disabled="loading">
+                                    {{ loading ? 'Signing in...' : 'Sign In' }}
                                 </button>
                             </form>
-                            <small class="text-muted d-block mt-3">
-                                Staff and Admin accounts are assigned directly. Students can register alongside.
-                            </small>
+                            <div class="mt-3 text-muted small">
+                                * Portal staff and examiners use assigned credentials. Students may register on the right.
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Registration section -->
+                <!-- Registration Box -->
                 <div class="col-md-5 mb-4">
-                    <div class="card shadow-sm border-0">
-                        <div class="card-header bg-success text-white fw-semibold">Student Sign Up</div>
+                    <div class="portal-card shadow-sm">
+                        <div class="portal-card-header header-sage">Student Registration</div>
                         <div class="card-body p-4">
                             <form @submit.prevent="handleRegister">
                                 <div class="mb-3">
-                                    <label class="form-label">Full Name</label>
-                                    <input type="text" class="form-control" v-model="registerForm.name" required placeholder="Alex Smith">
+                                    <label class="form-label text-muted small fw-semibold">Full Name</label>
+                                    <input type="text" class="form-control" v-model="registerForm.name" required placeholder="Jane Doe">
                                 </div>
                                 <div class="mb-3">
-                                    <label class="form-label">Email address</label>
-                                    <input type="email" class="form-control" v-model="registerForm.email" required placeholder="student@example.com">
+                                    <label class="form-label text-muted small fw-semibold">Email address</label>
+                                    <input type="email" class="form-control" v-model="registerForm.email" required placeholder="jane@example.com">
                                 </div>
                                 <div class="mb-3">
-                                    <label class="form-label">Password</label>
-                                    <input type="password" class="form-control" v-model="registerForm.password" required minlength="6" placeholder="Min. 6 characters">
+                                    <label class="form-label text-muted small fw-semibold">Password</label>
+                                    <input type="password" class="form-control" v-model="registerForm.password" required minlength="6" placeholder="At least 6 characters">
                                 </div>
-                                <button type="submit" class="btn btn-success w-100" :disabled="loading">
+                                <button type="submit" class="btn btn-portal-sage w-100 mt-2" :disabled="loading">
                                     {{ loading ? 'Registering...' : 'Create Account' }}
                                 </button>
                             </form>
@@ -85,38 +176,321 @@
                 </div>
             </div>
 
-            <!-- Main App Views -->
+            <!-- VIEW 2: ROLE-BASED DASHBOARDS -->
             <div v-else>
-                <!-- Admin Panel View -->
-                <div v-if="currentUser.role === 'Admin'" class="card shadow-sm border-0 mb-4">
-                    <div class="card-header bg-dark text-white fw-bold">Admin Dashboard</div>
-                    <div class="card-body p-4">
-                        <h4 class="card-title">Welcome back, Admin</h4>
-                        <p class="text-muted">Manage courses, examinations, and assigned staff members below.</p>
-                        <button class="btn btn-outline-primary" @click="testAdminRoute">Verify Admin Access</button>
+                <!-- ADMIN DASHBOARD -->
+                <div v-if="currentUser.role === 'Admin'">
+                    <!-- Summary Stats Badges -->
+                    <div class="row g-3 mb-4 text-center">
+                        <div class="col-md-2 col-6">
+                            <div class="stat-card shadow-sm py-3">
+                                <div class="text-muted small fw-medium">Courses</div>
+                                <div class="h3 fw-bold mb-0" style="color: #4F6D7A;">{{ stats.total_courses }}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-2 col-6">
+                            <div class="stat-card shadow-sm py-3">
+                                <div class="text-muted small fw-medium">Examinations</div>
+                                <div class="h3 fw-bold mb-0" style="color: #5E8B7E;">{{ stats.total_examinations }}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-2 col-6">
+                            <div class="stat-card shadow-sm py-3">
+                                <div class="text-muted small fw-medium">Examiners</div>
+                                <div class="h3 fw-bold mb-0" style="color: #6C7A89;">{{ stats.total_examiners }}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-2 col-6">
+                            <div class="stat-card shadow-sm py-3">
+                                <div class="text-muted small fw-medium">Students</div>
+                                <div class="h3 fw-bold mb-0" style="color: #7B889B;">{{ stats.total_students }}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-2 col-6">
+                            <div class="stat-card shadow-sm py-3">
+                                <div class="text-muted small fw-medium">Slots</div>
+                                <div class="h3 fw-bold mb-0" style="color: #9A8C98;">{{ stats.total_slots }}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-2 col-6">
+                            <div class="stat-card shadow-sm py-3">
+                                <div class="text-muted small fw-medium">Bookings</div>
+                                <div class="h3 fw-bold mb-0" style="color: #C97A7E;">{{ stats.total_bookings }}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Navigation Tabs -->
+                    <ul class="nav nav-pills mb-4">
+                        <li class="nav-item">
+                            <button class="nav-link" :class="{ active: adminTab === 'courses' }" @click="adminTab = 'courses'">Courses</button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link" :class="{ active: adminTab === 'exams' }" @click="adminTab = 'exams'">Examinations</button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link" :class="{ active: adminTab === 'examiners' }" @click="adminTab = 'examiners'">Examiners</button>
+                        </li>
+                    </ul>
+
+                    <!-- TAB 1: COURSES -->
+                    <div v-if="adminTab === 'courses'" class="portal-card shadow-sm mb-4">
+                        <div class="portal-card-header bg-white d-flex justify-content-between align-items-center py-3">
+                            <span class="fw-semibold">Course Catalog</span>
+                            <button class="btn btn-portal-primary btn-sm px-3" @click="showCourseModal = true">+ Add Course</button>
+                        </div>
+                        <div class="card-body p-0 table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr class="small text-muted">
+                                        <th>Code</th>
+                                        <th>Course Name</th>
+                                        <th>Description</th>
+                                        <th>Status</th>
+                                        <th>Exams</th>
+                                        <th class="text-end">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="c in courses" :key="c.id">
+                                        <td class="fw-semibold">{{ c.course_code }}</td>
+                                        <td>{{ c.course_name }}</td>
+                                        <td class="text-muted small">{{ c.description || '—' }}</td>
+                                        <td>
+                                            <span class="badge rounded-pill" :style="{ backgroundColor: c.status === 'Active' ? '#5E8B7E' : '#94A3B8' }">{{ c.status }}</span>
+                                        </td>
+                                        <td>{{ c.exam_count }}</td>
+                                        <td class="text-end">
+                                            <button class="btn btn-outline-danger btn-sm" @click="deleteCourse(c.id)">Delete</button>
+                                        </td>
+                                    </tr>
+                                    <tr v-if="courses.length === 0">
+                                        <td colspan="6" class="text-center text-muted py-4">No courses registered yet.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- TAB 2: EXAMS -->
+                    <div v-if="adminTab === 'exams'" class="portal-card shadow-sm mb-4">
+                        <div class="portal-card-header bg-white d-flex justify-content-between align-items-center py-3">
+                            <span class="fw-semibold">Active Examinations</span>
+                            <button class="btn btn-portal-primary btn-sm px-3" @click="showExamModal = true">+ Create Examination</button>
+                        </div>
+                        <div class="card-body p-0 table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr class="small text-muted">
+                                        <th>Course</th>
+                                        <th>Exam Name</th>
+                                        <th>Type</th>
+                                        <th>Duration</th>
+                                        <th>Max Marks</th>
+                                        <th>Current Phase</th>
+                                        <th class="text-end">Change Phase</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="ex in exams" :key="ex.id">
+                                        <td class="fw-semibold">{{ ex.course_code }}</td>
+                                        <td>{{ ex.examination_name }}</td>
+                                        <td><span class="badge text-bg-light border">{{ ex.exam_type }}</span></td>
+                                        <td>{{ ex.duration }}m</td>
+                                        <td>{{ ex.maximum_marks }}</td>
+                                        <td>
+                                            <span class="badge rounded-pill bg-light text-dark border">{{ ex.status }}</span>
+                                        </td>
+                                        <td class="text-end">
+                                            <select class="form-select form-select-sm d-inline-block w-auto" :value="ex.status" @change="changeExamStatus(ex.id, $event.target.value)">
+                                                <option value="Draft">Draft</option>
+                                                <option value="Slot Creation">Slot Creation</option>
+                                                <option value="Booking Open">Booking Open</option>
+                                                <option value="Closed">Closed</option>
+                                                <option value="Completed">Completed</option>
+                                            </select>
+                                        </td>
+                                    </tr>
+                                    <tr v-if="exams.length === 0">
+                                        <td colspan="7" class="text-center text-muted py-4">No examinations configured yet.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- TAB 3: EXAMINERS -->
+                    <div v-if="adminTab === 'examiners'" class="portal-card shadow-sm mb-4">
+                        <div class="portal-card-header bg-white d-flex justify-content-between align-items-center py-3">
+                            <span class="fw-semibold">Examiner Directory</span>
+                            <button class="btn btn-portal-primary btn-sm px-3" @click="showExaminerModal = true">+ Provision Examiner</button>
+                        </div>
+                        <div class="card-body p-0 table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr class="small text-muted">
+                                        <th>Name</th>
+                                        <th>Email</th>
+                                        <th>Date Added</th>
+                                        <th>Status</th>
+                                        <th class="text-end">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="e in examiners" :key="e.id">
+                                        <td class="fw-semibold">{{ e.name }}</td>
+                                        <td>{{ e.email }}</td>
+                                        <td class="text-muted small">{{ e.created_at || '—' }}</td>
+                                        <td>
+                                            <span class="badge rounded-pill" :style="{ backgroundColor: e.is_active ? '#5E8B7E' : '#94A3B8' }">
+                                                {{ e.is_active ? 'Active' : 'Deactivated' }}
+                                            </span>
+                                        </td>
+                                        <td class="text-end">
+                                            <button :class="['btn', 'btn-sm', e.is_active ? 'btn-outline-secondary' : 'btn-outline-success']" @click="toggleExaminer(e.id)">
+                                                {{ e.is_active ? 'Deactivate' : 'Activate' }}
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <tr v-if="examiners.length === 0">
+                                        <td colspan="5" class="text-center text-muted py-4">No examiners provisioned yet.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Examiner Panel View -->
-                <div v-else-if="currentUser.role === 'Examiner'" class="card shadow-sm border-0 mb-4">
-                    <div class="card-header bg-secondary text-white fw-bold">Examiner Dashboard</div>
+                <!-- EXAMINER DASHBOARD PLACEHOLDER -->
+                <div v-else-if="currentUser.role === 'Examiner'" class="portal-card shadow-sm mb-4">
+                    <div class="portal-card-header header-slate">Examiner Workspace</div>
                     <div class="card-body p-4">
-                        <h4 class="card-title">Welcome, Examiner</h4>
-                        <p class="text-muted">View upcoming oral examinations and schedule your available slots.</p>
+                        <h5>Welcome, {{ currentUser.name }}</h5>
+                        <p class="text-muted small">Your assigned slots and oral grading rubrics will appear here.</p>
                     </div>
                 </div>
 
-                <!-- Student Panel View -->
-                <div v-else-if="currentUser.role === 'Student'" class="card shadow-sm border-0 mb-4">
-                    <div class="card-header bg-info text-white fw-bold">Student Dashboard</div>
+                <!-- STUDENT DASHBOARD PLACEHOLDER -->
+                <div v-else-if="currentUser.role === 'Student'" class="portal-card shadow-sm mb-4">
+                    <div class="portal-card-header header-sage">Student Workspace</div>
                     <div class="card-body p-4">
-                        <h4 class="card-title">Student Portal</h4>
-                        <p class="text-muted">Browse scheduled exams, book open slots, and track evaluation feedback.</p>
+                        <h5>Welcome, {{ currentUser.name }}</h5>
+                        <p class="text-muted small">View open examination dates, reserve assessment slots, and inspect evaluation remarks here.</p>
                     </div>
                 </div>
             </div>
         </div>
+
+        <!-- MODAL: ADD COURSE -->
+        <div v-if="showCourseModal" class="modal fade show d-block" tabindex="-1" style="background: rgba(15,23,42,0.45);">
+            <div class="modal-dialog">
+                <div class="modal-content border-0 shadow">
+                    <div class="modal-header">
+                        <h6 class="modal-title fw-semibold">Add New Course</h6>
+                        <button type="button" class="btn-close" @click="showCourseModal = false"></button>
+                    </div>
+                    <form @submit.prevent="createCourse">
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label class="form-label text-muted small fw-semibold">Course Code</label>
+                                <input type="text" class="form-control" v-model="courseForm.course_code" required placeholder="CS2006">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label text-muted small fw-semibold">Course Name</label>
+                                <input type="text" class="form-control" v-model="courseForm.course_name" required placeholder="Modern Application Development II">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label text-muted small fw-semibold">Description</label>
+                                <textarea class="form-control" v-model="courseForm.description" rows="2" placeholder="Brief outline of the course"></textarea>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-outline-secondary btn-sm" @click="showCourseModal = false">Cancel</button>
+                            <button type="submit" class="btn btn-portal-primary btn-sm px-3">Save Course</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL: CREATE EXAMINATION -->
+        <div v-if="showExamModal" class="modal fade show d-block" tabindex="-1" style="background: rgba(15,23,42,0.45);">
+            <div class="modal-dialog">
+                <div class="modal-content border-0 shadow">
+                    <div class="modal-header">
+                        <h6 class="modal-title fw-semibold">Create Examination</h6>
+                        <button type="button" class="btn-close" @click="showExamModal = false"></button>
+                    </div>
+                    <form @submit.prevent="createExam">
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label class="form-label text-muted small fw-semibold">Associated Course</label>
+                                <select class="form-select" v-model="examForm.course_id" required>
+                                    <option disabled value="">Select a course</option>
+                                    <option v-for="c in courses" :key="c.id" :value="c.id">{{ c.course_code }} - {{ c.course_name }}</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label text-muted small fw-semibold">Examination Title</label>
+                                <input type="text" class="form-control" v-model="examForm.examination_name" required placeholder="Project Demo & Viva">
+                            </div>
+                            <div class="row">
+                                <div class="col-6 mb-3">
+                                    <label class="form-label text-muted small fw-semibold">Exam Type</label>
+                                    <select class="form-select" v-model="examForm.exam_type">
+                                        <option value="Viva">Viva</option>
+                                        <option value="Practical">Practical</option>
+                                        <option value="Project Demo">Project Demo</option>
+                                    </select>
+                                </div>
+                                <div class="col-6 mb-3">
+                                    <label class="form-label text-muted small fw-semibold">Duration (mins)</label>
+                                    <input type="number" class="form-control" v-model="examForm.duration" required min="5">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-outline-secondary btn-sm" @click="showExamModal = false">Cancel</button>
+                            <button type="submit" class="btn btn-portal-primary btn-sm px-3">Save Examination</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL: PROVISION EXAMINER -->
+        <div v-if="showExaminerModal" class="modal fade show d-block" tabindex="-1" style="background: rgba(15,23,42,0.45);">
+            <div class="modal-dialog">
+                <div class="modal-content border-0 shadow">
+                    <div class="modal-header">
+                        <h6 class="modal-title fw-semibold">Provision Examiner Account</h6>
+                        <button type="button" class="btn-close" @click="showExaminerModal = false"></button>
+                    </div>
+                    <form @submit.prevent="createExaminer">
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label class="form-label text-muted small fw-semibold">Staff Name</label>
+                                <input type="text" class="form-control" v-model="examinerForm.name" required placeholder="Dr. R. Sharma">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label text-muted small fw-semibold">Email address</label>
+                                <input type="email" class="form-control" v-model="examinerForm.email" required placeholder="sharma@institution.edu">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label text-muted small fw-semibold">Temporary Password</label>
+                                <input type="password" class="form-control" v-model="examinerForm.password" required minlength="6" placeholder="Assign temporary access key">
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-outline-secondary btn-sm" @click="showExaminerModal = false">Cancel</button>
+                            <button type="submit" class="btn btn-portal-primary btn-sm px-3">Create Examiner</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
     </div>
+    {% endraw %}
 
     <!-- Frontend Logic -->
     <script>
@@ -131,11 +505,24 @@
                     alertMessage: '',
                     alertType: 'info',
                     loginForm: { email: '', password: '' },
-                    registerForm: { name: '', email: '', password: '' }
+                    registerForm: { name: '', email: '', password: '' },
+
+                    adminTab: 'courses',
+                    stats: { total_courses: 0, total_examinations: 0, total_examiners: 0, total_students: 0, total_slots: 0, total_bookings: 0 },
+                    courses: [],
+                    exams: [],
+                    examiners: [],
+
+                    showCourseModal: false,
+                    showExamModal: false,
+                    showExaminerModal: false,
+
+                    courseForm: { course_code: '', course_name: '', description: '' },
+                    examForm: { course_id: '', examination_name: '', exam_type: 'Viva', duration: 30, maximum_marks: 100 },
+                    examinerForm: { name: '', email: '', password: '' }
                 };
             },
             mounted() {
-                // Restore user session if a token exists in storage
                 if (this.token) {
                     this.fetchCurrentUser();
                 }
@@ -159,8 +546,12 @@
                         this.token = data.access_token;
                         this.currentUser = data.user;
                         localStorage.setItem('access_token', this.token);
-                        this.showAlert(`Logged in as ${data.user.name}`, 'success');
+                        this.showAlert(`Signed in as ${data.user.name}`, 'success');
                         this.loginForm = { email: '', password: '' };
+
+                        if (this.currentUser.role === 'Admin') {
+                            this.loadAdminData();
+                        }
                     } catch (err) {
                         this.showAlert(err.message, 'danger');
                     } finally {
@@ -178,7 +569,7 @@
                         const data = await res.json();
                         if (!res.ok) throw new Error(data.error || 'Registration failed');
 
-                        this.showAlert('Account created! You can now sign in.', 'success');
+                        this.showAlert('Registration complete! Please sign in with your credentials.', 'success');
                         this.registerForm = { name: '', email: '', password: '' };
                     } catch (err) {
                         this.showAlert(err.message, 'danger');
@@ -197,30 +588,136 @@
                         }
                         const data = await res.json();
                         this.currentUser = data;
+                        if (this.currentUser.role === 'Admin') {
+                            this.loadAdminData();
+                        }
                     } catch {
                         this.logout();
                     }
                 },
-                async testAdminRoute() {
+                async loadAdminData() {
+                    const headers = { 'Authorization': `Bearer ${this.token}` };
                     try {
-                        const res = await fetch('/api/admin/test', {
+                        const [sRes, cRes, eRes, exRes] = await Promise.all([
+                            fetch('/api/admin/stats', { headers }),
+                            fetch('/api/admin/courses', { headers }),
+                            fetch('/api/admin/examinations', { headers }),
+                            fetch('/api/admin/examiners', { headers })
+                        ]);
+                        if (sRes.ok) this.stats = await sRes.json();
+                        if (cRes.ok) this.courses = await cRes.json();
+                        if (eRes.ok) this.exams = await eRes.json();
+                        if (exRes.ok) this.examiners = await exRes.json();
+                    } catch (err) {
+                        this.showAlert('Error loading portal records: ' + err.message, 'danger');
+                    }
+                },
+                async createCourse() {
+                    try {
+                        const res = await fetch('/api/admin/courses', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${this.token}` },
+                            body: JSON.stringify(this.courseForm)
+                        });
+                        const data = await res.json();
+                        if (!res.ok) throw new Error(data.error || 'Unable to create course');
+
+                        this.showAlert(data.message, 'success');
+                        this.showCourseModal = false;
+                        this.courseForm = { course_code: '', course_name: '', description: '' };
+                        this.loadAdminData();
+                    } catch (err) {
+                        this.showAlert(err.message, 'danger');
+                    }
+                },
+                async deleteCourse(id) {
+                    if (!confirm('Are you sure you want to remove this course and its associated exams?')) return;
+                    try {
+                        const res = await fetch(`/api/admin/courses/${id}`, {
+                            method: 'DELETE',
                             headers: { 'Authorization': `Bearer ${this.token}` }
                         });
                         const data = await res.json();
-                        if (res.ok) {
-                            alert(data.message);
-                        } else {
-                            alert(`Status ${res.status}: ${data.message || data.error}`);
-                        }
+                        if (!res.ok) throw new Error(data.error || 'Failed to remove course');
+
+                        this.showAlert(data.message, 'success');
+                        this.loadAdminData();
                     } catch (err) {
-                        alert(err.message);
+                        this.showAlert(err.message, 'danger');
+                    }
+                },
+                async createExam() {
+                    try {
+                        const res = await fetch('/api/admin/examinations', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${this.token}` },
+                            body: JSON.stringify(this.examForm)
+                        });
+                        const data = await res.json();
+                        if (!res.ok) throw new Error(data.error || 'Unable to schedule examination');
+
+                        this.showAlert(data.message, 'success');
+                        this.showExamModal = false;
+                        this.examForm = { course_id: '', examination_name: '', exam_type: 'Viva', duration: 30, maximum_marks: 100 };
+                        this.loadAdminData();
+                    } catch (err) {
+                        this.showAlert(err.message, 'danger');
+                    }
+                },
+                async changeExamStatus(id, newStatus) {
+                    try {
+                        const res = await fetch(`/api/admin/examinations/${id}/status`, {
+                            method: 'PATCH',
+                            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${this.token}` },
+                            body: JSON.stringify({ status: newStatus })
+                        });
+                        const data = await res.json();
+                        if (!res.ok) throw new Error(data.error || 'Status update failed');
+
+                        this.showAlert(data.message, 'success');
+                        this.loadAdminData();
+                    } catch (err) {
+                        this.showAlert(err.message, 'danger');
+                    }
+                },
+                async createExaminer() {
+                    try {
+                        const res = await fetch('/api/admin/examiners', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${this.token}` },
+                            body: JSON.stringify(this.examinerForm)
+                        });
+                        const data = await res.json();
+                        if (!res.ok) throw new Error(data.error || 'Failed to provision account');
+
+                        this.showAlert(data.message, 'success');
+                        this.showExaminerModal = false;
+                        this.examinerForm = { name: '', email: '', password: '' };
+                        this.loadAdminData();
+                    } catch (err) {
+                        this.showAlert(err.message, 'danger');
+                    }
+                },
+                async toggleExaminer(id) {
+                    try {
+                        const res = await fetch(`/api/admin/examiners/${id}/status`, {
+                            method: 'PATCH',
+                            headers: { 'Authorization': `Bearer ${this.token}` }
+                        });
+                        const data = await res.json();
+                        if (!res.ok) throw new Error(data.error || 'Action failed');
+
+                        this.showAlert(data.message, 'info');
+                        this.loadAdminData();
+                    } catch (err) {
+                        this.showAlert(err.message, 'danger');
                     }
                 },
                 logout() {
                     this.token = null;
                     this.currentUser = null;
                     localStorage.removeItem('access_token');
-                    this.showAlert('You have been logged out.', 'info');
+                    this.showAlert('Logged out successfully.', 'info');
                 }
             }
         }).mount('#app');

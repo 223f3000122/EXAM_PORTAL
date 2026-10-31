@@ -5,11 +5,12 @@ from flask_jwt_extended import JWTManager
 from flask_cors import CORS
 from models import db
 from auth import auth_bp, role_required
+from admin import admin_bp
 
 def create_app():
     app = Flask(__name__, template_folder='templates', static_folder='static')
     
-    # Configuration
+    # Database and JWT configuration
     base_dir = os.path.abspath(os.path.dirname(__file__))
     app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{os.path.join(base_dir, 'exam_portal.db')}"
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -21,21 +22,22 @@ def create_app():
     CORS(app)
     JWTManager(app)
 
-    # Register Blueprints
+    # Register application blueprints
     app.register_blueprint(auth_bp)
+    app.register_blueprint(admin_bp)
 
-    # Health Check Endpoint
+    # Server health check
     @app.route('/api/ping', methods=['GET'])
     def ping():
         return jsonify({"status": "running", "portal": "EMP-V2"}), 200
 
-    # Role Protected Test Endpoint (Useful for viva demonstration)
+    # Role-protected test endpoint
     @app.route('/api/admin/test', methods=['GET'])
     @role_required('Admin')
     def admin_only():
         return jsonify({"message": "Authorized: Welcome to the Admin restricted zone"}), 200
 
-    # Single Entry Point for Vue (Jinja2 entry point allowed by spec)
+    # Single entry point for Vue SPA
     @app.route('/', defaults={'path': ''})
     @app.route('/<path:path>')
     def catch_all(path):
