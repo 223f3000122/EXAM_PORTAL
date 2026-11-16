@@ -1,3 +1,5 @@
+import json
+import redis
 from datetime import datetime
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required
@@ -5,6 +7,22 @@ from models import db, User, Course, Examination, ExaminationRubric, Examination
 from auth import role_required
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/api/admin')
+
+# Initialize Redis client for Milestone 8 caching (with safe fallback if Redis is offline)
+try:
+    redis_client = redis.Redis(host='localhost', port=6379, db=1, decode_responses=True)
+    redis_client.ping()
+except Exception:
+    redis_client = None
+
+
+def invalidate_admin_cache():
+    if redis_client:
+        try:
+            redis_client.delete('admin_courses_cache', 'admin_exams_cache')
+        except Exception:
+            pass
+
 
 # 1. Summary Statistics for Admin Dashboard Cards
 @admin_bp.route('/stats', methods=['GET'])
@@ -20,19 +38,36 @@ def get_stats():
     }), 200
 
 
-# 2. Course CRUD Endpoints
+# 2. Course CRUD Endpoints (with Redis Caching & Invalidation)
 @admin_bp.route('/courses', methods=['GET'])
 @role_required('Admin')
 def list_courses():
+    if redis_client:
+        try:
+            cached = redis_client.get('admin_courses_cache')
+            if cached:
+                return jsonify(json.loads(cached)), 200
+        except Exception:
+            pass
+
     courses = Course.query.order_by(Course.id.desc()).all()
-    return jsonify([{
+    payload = [{
         "id": c.id,
         "course_code": c.course_code,
         "course_name": c.course_name,
         "description": c.description,
         "status": c.status,
         "exam_count": len(c.examinations)
-    } for c in courses]), 200
+    } for c in courses]
+
+    if redis_client:
+        try:
+            redis_client.setex('admin_courses_cache', 60, json.dumps(payload))
+        except Exception:
+            pass
+
+    return jsonify(payload), 200
+
 
 @admin_bp.route('/courses', methods=['POST'])
 @role_required('Admin')
@@ -51,7 +86,10 @@ def create_course():
     course = Course(course_code=code, course_name=name, description=description, status='Active')
     db.session.add(course)
     db.session.commit()
+    invalidate_admin_cache()
+
     return jsonify({"message": "Course created successfully", "course_id": course.id}), 201
+
 
 @admin_bp.route('/courses/<int:course_id>', methods=['PUT'])
 @role_required('Admin')
@@ -66,7 +104,10 @@ def update_course(course_id):
     course.status = data.get('status', course.status)
 
     db.session.commit()
+    invalidate_admin_cache()
+
     return jsonify({"message": "Course updated successfully"}), 200
+
 
 @admin_bp.route('/courses/<int:course_id>', methods=['DELETE'])
 @role_required('Admin')
@@ -77,13 +118,23 @@ def delete_course(course_id):
 
     db.session.delete(course)
     db.session.commit()
+    invalidate_admin_cache()
+
     return jsonify({"message": "Course and associated exams deleted successfully"}), 200
 
 
-# 3. Examination Management Endpoints
+# 3. Examination Management Endpoints (with Redis Caching & Invalidation)
 @admin_bp.route('/examinations', methods=['GET'])
 @role_required('Admin')
 def list_examinations():
+    if redis_client:
+        try:
+            cached = redis_client.get('admin_exams_cache')
+            if cached:
+                return jsonify(json.loads(cached)), 200
+        except Exception:
+            pass
+
     exams = Examination.query.order_by(Examination.id.desc()).all()
     results = []
     for exam in exams:
@@ -103,7 +154,15 @@ def list_examinations():
                 "weightage": r.weightage
             } for r in exam.rubrics]
         })
+
+    if redis_client:
+        try:
+            redis_client.setex('admin_exams_cache', 60, json.dumps(results))
+        except Exception:
+            pass
+
     return jsonify(results), 200
+
 
 @admin_bp.route('/examinations', methods=['POST'])
 @role_required('Admin')
@@ -148,7 +207,10 @@ def create_examination():
             db.session.add(rubric)
 
     db.session.commit()
+    invalidate_admin_cache()
+
     return jsonify({"message": "Examination created successfully", "exam_id": exam.id}), 201
+
 
 @admin_bp.route('/examinations/<int:exam_id>/status', methods=['PATCH'])
 @role_required('Admin')
@@ -166,6 +228,8 @@ def update_exam_status(exam_id):
 
     exam.status = new_status
     db.session.commit()
+    invalidate_admin_cache()
+
     return jsonify({"message": f"Examination status updated to {new_status}"}), 200
 
 
@@ -181,6 +245,7 @@ def list_examiners():
         "is_active": u.is_active,
         "created_at": u.created_at.strftime('%Y-%m-%d') if u.created_at else None
     } for u in examiners]), 200
+
 
 @admin_bp.route('/examiners', methods=['POST'])
 @role_required('Admin')
@@ -202,6 +267,7 @@ def create_examiner():
     db.session.commit()
 
     return jsonify({"message": "Examiner account created successfully", "examiner_id": examiner.id}), 201
+
 
 @admin_bp.route('/examiners/<int:examiner_id>/status', methods=['PATCH'])
 @role_required('Admin')

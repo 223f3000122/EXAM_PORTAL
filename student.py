@@ -1,8 +1,12 @@
+import os
+import re
 from datetime import datetime
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, send_from_directory
 from flask_jwt_extended import get_jwt_identity
 from models import db, Examination, ExaminationSlot, Booking, User
 from auth import role_required
+from cache import cache_get, cache_set, student_dashboard_key
+from tasks import export_student_history_csv, EXPORT_DIR
 
 student_bp = Blueprint('student', __name__, url_prefix='/api/student')
 
@@ -41,6 +45,12 @@ def _serialize_booking(b):
 @role_required('Student')
 def get_student_dashboard():
     student_id = int(get_jwt_identity())
+
+    cache_key = student_dashboard_key(student_id)
+    cached = cache_get(cache_key)
+    if cached is not None:
+        return jsonify(cached), 200
+
     student = User.query.get(student_id)
 
     my_bookings = Booking.query.filter_by(student_id=student_id) \
@@ -82,7 +92,7 @@ def get_student_dashboard():
 
     bookings_data = [_serialize_booking(b) for b in my_bookings]
 
-    return jsonify({
+    payload = {
         "profile": {"id": student.id, "name": student.name, "email": student.email},
         "stats": {
             "open_exams": len(open_exams),
@@ -92,7 +102,9 @@ def get_student_dashboard():
         },
         "open_exams": exams_data,
         "bookings": bookings_data
-    }), 200
+    }
+    cache_set(cache_key, payload)
+    return jsonify(payload), 200
 
 
 # 2. Book a Slot (atomic seat decrement)
@@ -195,3 +207,56 @@ def update_profile():
     student.name = name
     db.session.commit()
     return jsonify({"message": "Profile updated successfully", "name": student.name}), 200
+
+
+# 5. Trigger async CSV export of booking history
+@student_bp.route('/export-csv', methods=['POST'])
+@role_required('Student')
+def start_csv_export():
+    student_id = int(get_jwt_identity())
+    try:
+        task = export_student_history_csv.delay(student_id)
+        return jsonify({"message": "Export started", "task_id": task.id, "status": "PENDING"}), 202
+    except Exception:
+        # Broker (Redis) offline: run inline so the user still gets their file
+        result = export_student_history_csv.apply(args=[student_id]).get()
+        return jsonify({
+            "message": "Export generated (background worker unavailable, ran inline)",
+            "task_id": None,
+            "status": "SUCCESS",
+            "filename": result["filename"],
+            "rows": result["rows"]
+        }), 200
+
+
+# 6. Poll export task status
+@student_bp.route('/export-csv/<task_id>', methods=['GET'])
+@role_required('Student')
+def csv_export_status(task_id):
+    student_id = int(get_jwt_identity())
+    try:
+        res = export_student_history_csv.AsyncResult(task_id)
+        state = res.state
+    except Exception:
+        return jsonify({"error": "Task backend unavailable"}), 503
+
+    if state == 'SUCCESS':
+        data = res.result or {}
+        if data.get('student_id') != student_id:
+            return jsonify({"error": "Forbidden"}), 403
+        return jsonify({"status": state, "filename": data['filename'], "rows": data['rows']}), 200
+    if state == 'FAILURE':
+        return jsonify({"status": state, "error": "Export failed"}), 200
+    return jsonify({"status": state}), 200
+
+
+# 7. Download a generated CSV (only the requesting student's own files)
+@student_bp.route('/export-csv/download/<filename>', methods=['GET'])
+@role_required('Student')
+def download_csv(filename):
+    student_id = int(get_jwt_identity())
+    if not re.fullmatch(rf"student_{student_id}_history_\d{{8}}_\d{{6}}\.csv", filename):
+        return jsonify({"error": "Forbidden"}), 403
+    if not os.path.exists(os.path.join(EXPORT_DIR, filename)):
+        return jsonify({"error": "File not found"}), 404
+    return send_from_directory(EXPORT_DIR, filename, as_attachment=True, mimetype='text/csv')
