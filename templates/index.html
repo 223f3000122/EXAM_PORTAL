@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -487,12 +487,207 @@
                     </div>
                 </div>
 
-                <!-- STUDENT DASHBOARD PLACEHOLDER -->
-                <div v-else-if="currentUser.role === 'Student'" class="portal-card shadow-sm mb-4">
-                    <div class="portal-card-header header-sage">Student Workspace</div>
-                    <div class="card-body p-4">
-                        <h5>Welcome, {{ currentUser.name }}</h5>
-                        <p class="text-muted small">View open examination dates, reserve assessment slots, and inspect evaluation remarks here.</p>
+                <!-- STUDENT DASHBOARD -->
+                <div v-else-if="currentUser.role === 'Student'">
+                    <!-- Stat Cards -->
+                    <div class="row g-3 mb-4 text-center">
+                        <div class="col-md-3 col-6">
+                            <div class="stat-card shadow-sm py-3">
+                                <div class="text-muted small fw-medium">Open Exams</div>
+                                <div class="h3 fw-bold mb-0" style="color: #4F6D7A;">{{ studentStats.open_exams }}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-6">
+                            <div class="stat-card shadow-sm py-3">
+                                <div class="text-muted small fw-medium">Upcoming</div>
+                                <div class="h3 fw-bold mb-0" style="color: #5E8B7E;">{{ studentStats.upcoming }}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-6">
+                            <div class="stat-card shadow-sm py-3">
+                                <div class="text-muted small fw-medium">Completed</div>
+                                <div class="h3 fw-bold mb-0" style="color: #6C7A89;">{{ studentStats.completed }}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-6">
+                            <div class="stat-card shadow-sm py-3">
+                                <div class="text-muted small fw-medium">Cancelled</div>
+                                <div class="h3 fw-bold mb-0" style="color: #C97A7E;">{{ studentStats.cancelled }}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tabs -->
+                    <ul class="nav nav-pills mb-4">
+                        <li class="nav-item"><button class="nav-link" :class="{ active: studentTab === 'exams' }" @click="studentTab = 'exams'">Open Examinations</button></li>
+                        <li class="nav-item"><button class="nav-link" :class="{ active: studentTab === 'bookings' }" @click="studentTab = 'bookings'">My Bookings &amp; History</button></li>
+                        <li class="nav-item"><button class="nav-link" :class="{ active: studentTab === 'results' }" @click="studentTab = 'results'">Evaluation Results</button></li>
+                        <li class="nav-item"><button class="nav-link" :class="{ active: studentTab === 'profile' }" @click="studentTab = 'profile'">Profile</button></li>
+                    </ul>
+
+                    <!-- TAB: OPEN EXAMS -->
+                    <div v-if="studentTab === 'exams'">
+                        <div class="portal-card shadow-sm mb-3">
+                            <div class="card-body p-3">
+                                <div class="row g-2">
+                                    <div class="col-md-6">
+                                        <input type="search" id="student-exam-search" class="form-control" v-model="examSearch" placeholder="Search by course code or exam name…">
+                                    </div>
+                                    <div class="col-md-3">
+                                        <select class="form-select" v-model="examTypeFilter">
+                                            <option value="">All Types</option>
+                                            <option value="Viva">Viva</option>
+                                            <option value="Practical">Practical</option>
+                                            <option value="Project Demo">Project Demo</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3 d-flex align-items-center">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="hide-booked" v-model="hideBookedExams">
+                                            <label class="form-check-label small" for="hide-booked">Hide already booked</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div v-for="ex in filteredOpenExams" :key="ex.id" class="portal-card shadow-sm mb-3">
+                            <div class="portal-card-header bg-white d-flex justify-content-between align-items-center py-3">
+                                <div>
+                                    <span class="fw-semibold">{{ ex.course_code }}</span> — {{ ex.examination_name }}
+                                    <div class="small text-muted">{{ ex.course_name }} · {{ ex.exam_type }} · {{ ex.duration }} min · Max {{ ex.maximum_marks }} marks</div>
+                                </div>
+                                <span v-if="ex.already_booked" class="badge rounded-pill" style="background-color: #5E8B7E;">Booked</span>
+                            </div>
+                            <div class="card-body p-0 table-responsive">
+                                <table class="table table-hover align-middle mb-0">
+                                    <thead class="table-light">
+                                        <tr class="small text-muted">
+                                            <th>Date</th><th>Time</th><th>Examiner</th><th>Seats Left</th><th class="text-end">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr v-for="s in ex.slots" :key="s.id">
+                                            <td>{{ s.slot_date }}</td>
+                                            <td class="small">{{ s.start_time }} – {{ s.end_time }}</td>
+                                            <td>{{ s.examiner_name }}</td>
+                                            <td><span class="badge text-bg-light border">{{ s.available_seats }} / {{ s.maximum_capacity }}</span></td>
+                                            <td class="text-end">
+                                                <button class="btn btn-portal-sage btn-sm" :disabled="ex.already_booked || bookingSlotId === s.id" @click="bookSlot(s, ex)">
+                                                    <span v-if="bookingSlotId === s.id" class="spinner-border spinner-border-sm me-1"></span>
+                                                    {{ ex.already_booked ? 'Already Booked' : 'Book Slot' }}
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        <tr v-if="ex.slots.length === 0">
+                                            <td colspan="5" class="text-center text-muted py-3 small">No seats currently available.</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div v-if="filteredOpenExams.length === 0" class="portal-card shadow-sm">
+                            <div class="card-body text-center text-muted py-4">No examinations match your filters or none are open for booking.</div>
+                        </div>
+                    </div>
+
+                    <!-- TAB: BOOKINGS & HISTORY -->
+                    <div v-if="studentTab === 'bookings'" class="portal-card shadow-sm mb-4">
+                        <div class="portal-card-header bg-white d-flex justify-content-between align-items-center py-3">
+                            <span class="fw-semibold">My Bookings &amp; History</span>
+                            <select class="form-select form-select-sm w-auto" v-model="bookingStatusFilter">
+                                <option value="">All Statuses</option>
+                                <option value="Booked">Booked</option>
+                                <option value="Completed">Completed</option>
+                                <option value="Cancelled">Cancelled</option>
+                            </select>
+                        </div>
+                        <div class="card-body p-0 table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr class="small text-muted">
+                                        <th>Exam</th><th>Slot</th><th>Examiner</th><th>Status</th><th>Marks</th><th class="text-end">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="b in filteredBookings" :key="b.booking_id">
+                                        <td>
+                                            <div class="fw-semibold">{{ b.course_code }}</div>
+                                            <div class="small text-muted">{{ b.examination_name }}</div>
+                                        </td>
+                                        <td class="small">{{ b.slot_date }}<br>{{ b.start_time }} – {{ b.end_time }}</td>
+                                        <td>{{ b.examiner_name }}</td>
+                                        <td>
+                                            <span class="badge rounded-pill" :style="{ backgroundColor: statusColor(b.status) }">{{ b.status }}</span>
+                                            <div v-if="b.is_upcoming" class="small text-muted mt-1">Upcoming</div>
+                                        </td>
+                                        <td>
+                                            <span v-if="b.evaluation" class="fw-semibold">{{ b.evaluation.total_marks }} / {{ b.maximum_marks }}</span>
+                                            <span v-else class="text-muted small">—</span>
+                                        </td>
+                                        <td class="text-end">
+                                            <button v-if="b.status === 'Booked'" class="btn btn-outline-danger btn-sm" @click="cancelBooking(b)">Cancel</button>
+                                        </td>
+                                    </tr>
+                                    <tr v-if="filteredBookings.length === 0">
+                                        <td colspan="6" class="text-center text-muted py-4">No bookings to show.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- TAB: EVALUATION RESULTS -->
+                    <div v-if="studentTab === 'results'">
+                        <div class="row g-3">
+                            <div v-for="b in evaluatedBookings" :key="b.booking_id" class="col-md-6">
+                                <div class="portal-card shadow-sm h-100">
+                                    <div class="portal-card-header header-sage d-flex justify-content-between">
+                                        <span>{{ b.course_code }} — {{ b.examination_name }}</span>
+                                        <span class="small">{{ b.exam_type }}</span>
+                                    </div>
+                                    <div class="card-body p-4">
+                                        <div class="d-flex align-items-end mb-2">
+                                            <span class="display-6 fw-bold" style="color: #4F6D7A;">{{ b.evaluation.total_marks }}</span>
+                                            <span class="text-muted ms-1 mb-2">/ {{ b.maximum_marks }}</span>
+                                        </div>
+                                        <div class="progress mb-3" style="height: 8px;">
+                                            <div class="progress-bar" :style="{ width: scorePercent(b) + '%', backgroundColor: '#5E8B7E' }"></div>
+                                        </div>
+                                        <div class="small text-muted fw-semibold mb-1">Examiner Remarks</div>
+                                        <p class="mb-2" style="white-space: pre-line;">{{ b.evaluation.remarks || 'No remarks provided.' }}</p>
+                                        <div class="small text-muted">Evaluated by {{ b.examiner_name }} · {{ b.evaluation.evaluation_date }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div v-if="evaluatedBookings.length === 0" class="col-12">
+                                <div class="portal-card shadow-sm">
+                                    <div class="card-body text-center text-muted py-4">No evaluation results have been published yet.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TAB: PROFILE -->
+                    <div v-if="studentTab === 'profile'" class="row justify-content-center">
+                        <div class="col-md-6">
+                            <div class="portal-card shadow-sm">
+                                <div class="portal-card-header header-sage">My Profile</div>
+                                <div class="card-body p-4">
+                                    <form @submit.prevent="updateProfile">
+                                        <div class="mb-3">
+                                            <label class="form-label text-muted small fw-semibold">Email</label>
+                                            <input type="email" class="form-control" :value="currentUser.email" disabled>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label text-muted small fw-semibold">Full Name</label>
+                                            <input type="text" class="form-control" v-model="profileForm.name" required maxlength="100">
+                                        </div>
+                                        <button type="submit" class="btn btn-portal-primary w-100">Save Changes</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -723,10 +918,39 @@
                     evalLoading: false,
                     evalSlot: null,
                     evalData: { bookings: [], rubrics: [] },
-                    evalInputs: {}
+                    evalInputs: {},
+
+                    // Student workspace
+                    studentTab: 'exams',
+                    studentStats: { open_exams: 0, upcoming: 0, completed: 0, cancelled: 0 },
+                    studentOpenExams: [],
+                    studentBookings: [],
+                    examSearch: '',
+                    examTypeFilter: '',
+                    hideBookedExams: false,
+                    bookingStatusFilter: '',
+                    bookingSlotId: null,
+                    profileForm: { name: '' }
                 };
             },
             computed: {
+                filteredOpenExams() {
+                    const q = this.examSearch.trim().toLowerCase();
+                    return this.studentOpenExams.filter(ex => {
+                        if (this.examTypeFilter && ex.exam_type !== this.examTypeFilter) return false;
+                        if (this.hideBookedExams && ex.already_booked) return false;
+                        if (!q) return true;
+                        return [ex.course_code, ex.course_name, ex.examination_name].some(v => (v || '').toLowerCase().includes(q));
+                    });
+                },
+                filteredBookings() {
+                    return this.bookingStatusFilter
+                        ? this.studentBookings.filter(b => b.status === this.bookingStatusFilter)
+                        : this.studentBookings;
+                },
+                evaluatedBookings() {
+                    return this.studentBookings.filter(b => b.evaluation);
+                },
                 todayStr() { const d = new Date(); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10); }
             },
             mounted() {
@@ -760,6 +984,8 @@
                             this.loadAdminData();
                         } else if (this.currentUser.role === 'Examiner') {
                             this.loadExaminerData();
+                        } else if (this.currentUser.role === 'Student') {
+                            this.loadStudentData();
                         }
                     } catch (err) {
                         this.showAlert(err.message, 'danger');
@@ -801,10 +1027,83 @@
                             this.loadAdminData();
                         } else if (this.currentUser.role === 'Examiner') {
                             this.loadExaminerData();
+                        } else if (this.currentUser.role === 'Student') {
+                            this.loadStudentData();
                         }
                     } catch {
                         this.logout();
                     }
+                },
+                async loadStudentData() {
+                    try {
+                        const res = await fetch('/api/student/dashboard', {
+                            headers: { 'Authorization': `Bearer ${this.token}` }
+                        });
+                        const data = await res.json();
+                        if (!res.ok) throw new Error(data.error || data.msg || 'Failed to load student dashboard');
+                        this.studentStats = data.stats;
+                        this.studentOpenExams = data.open_exams;
+                        this.studentBookings = data.bookings;
+                        this.profileForm.name = data.profile.name;
+                    } catch (err) {
+                        this.showAlert(err.message, 'danger');
+                    }
+                },
+                async bookSlot(slot, exam) {
+                    if (!confirm(`Book ${exam.course_code} on ${slot.slot_date} at ${slot.start_time}?`)) return;
+                    this.bookingSlotId = slot.id;
+                    try {
+                        const res = await fetch('/api/student/book', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${this.token}` },
+                            body: JSON.stringify({ slot_id: slot.id })
+                        });
+                        const data = await res.json();
+                        if (!res.ok) throw new Error(data.error || 'Booking failed');
+                        this.showAlert(data.message, 'success');
+                    } catch (err) {
+                        this.showAlert(err.message, 'danger');
+                    } finally {
+                        this.bookingSlotId = null;
+                        this.loadStudentData();
+                    }
+                },
+                async cancelBooking(b) {
+                    if (!confirm(`Cancel your booking for ${b.course_code} on ${b.slot_date}?`)) return;
+                    try {
+                        const res = await fetch(`/api/student/bookings/${b.booking_id}/cancel`, {
+                            method: 'PATCH',
+                            headers: { 'Authorization': `Bearer ${this.token}` }
+                        });
+                        const data = await res.json();
+                        if (!res.ok) throw new Error(data.error || 'Cancellation failed');
+                        this.showAlert(data.message, 'info');
+                        this.loadStudentData();
+                    } catch (err) {
+                        this.showAlert(err.message, 'danger');
+                    }
+                },
+                async updateProfile() {
+                    try {
+                        const res = await fetch('/api/student/profile', {
+                            method: 'PATCH',
+                            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${this.token}` },
+                            body: JSON.stringify({ name: this.profileForm.name })
+                        });
+                        const data = await res.json();
+                        if (!res.ok) throw new Error(data.error || 'Profile update failed');
+                        this.currentUser.name = data.name;
+                        this.showAlert(data.message, 'success');
+                    } catch (err) {
+                        this.showAlert(err.message, 'danger');
+                    }
+                },
+                statusColor(status) {
+                    return { Booked: '#4F6D7A', Completed: '#5E8B7E', Cancelled: '#94A3B8' }[status] || '#94A3B8';
+                },
+                scorePercent(b) {
+                    if (!b.maximum_marks) return 0;
+                    return Math.min(100, Math.round((b.evaluation.total_marks / b.maximum_marks) * 100));
                 },
                 async loadExaminerData() {
                     try {
