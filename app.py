@@ -6,6 +6,7 @@ from flask_cors import CORS
 from models import db
 from auth import auth_bp, role_required
 from admin import admin_bp
+from examiner import examiner_bp
 
 def create_app():
     app = Flask(__name__, template_folder='templates', static_folder='static')
@@ -25,6 +26,7 @@ def create_app():
     # Register application blueprints
     app.register_blueprint(auth_bp)
     app.register_blueprint(admin_bp)
+    app.register_blueprint(examiner_bp)
 
     # Server health check
     @app.route('/api/ping', methods=['GET'])

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -136,7 +136,7 @@
                                 </div>
                                 <div class="mb-3">
                                     <label class="form-label text-muted small fw-semibold">Password</label>
-                                    <input type="password" class="form-control" v-model="loginForm.password" required placeholder="••••••••">
+                                    <input type="password" class="form-control" v-model="loginForm.password" required placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢">
                                 </div>
                                 <button type="submit" class="btn btn-portal-primary w-100 mt-2" :disabled="loading">
                                     {{ loading ? 'Signing in...' : 'Sign In' }}
@@ -255,7 +255,7 @@
                                     <tr v-for="c in courses" :key="c.id">
                                         <td class="fw-semibold">{{ c.course_code }}</td>
                                         <td>{{ c.course_name }}</td>
-                                        <td class="text-muted small">{{ c.description || '—' }}</td>
+                                        <td class="text-muted small">{{ c.description || 'â€”' }}</td>
                                         <td>
                                             <span class="badge rounded-pill" :style="{ backgroundColor: c.status === 'Active' ? '#5E8B7E' : '#94A3B8' }">{{ c.status }}</span>
                                         </td>
@@ -340,7 +340,7 @@
                                     <tr v-for="e in examiners" :key="e.id">
                                         <td class="fw-semibold">{{ e.name }}</td>
                                         <td>{{ e.email }}</td>
-                                        <td class="text-muted small">{{ e.created_at || '—' }}</td>
+                                        <td class="text-muted small">{{ e.created_at || 'â€”' }}</td>
                                         <td>
                                             <span class="badge rounded-pill" :style="{ backgroundColor: e.is_active ? '#5E8B7E' : '#94A3B8' }">
                                                 {{ e.is_active ? 'Active' : 'Deactivated' }}
@@ -361,12 +361,129 @@
                     </div>
                 </div>
 
-                <!-- EXAMINER DASHBOARD PLACEHOLDER -->
-                <div v-else-if="currentUser.role === 'Examiner'" class="portal-card shadow-sm mb-4">
-                    <div class="portal-card-header header-slate">Examiner Workspace</div>
-                    <div class="card-body p-4">
-                        <h5>Welcome, {{ currentUser.name }}</h5>
-                        <p class="text-muted small">Your assigned slots and oral grading rubrics will appear here.</p>
+                <!-- EXAMINER DASHBOARD -->
+                <div v-else-if="currentUser.role === 'Examiner'">
+                    <!-- Stat Cards -->
+                    <div class="row g-3 mb-4 text-center">
+                        <div class="col-md-3 col-6">
+                            <div class="stat-card shadow-sm py-3">
+                                <div class="text-muted small fw-medium">Open Exams</div>
+                                <div class="h3 fw-bold mb-0" style="color: #4F6D7A;">{{ examinerStats.open_exams_count }}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-6">
+                            <div class="stat-card shadow-sm py-3">
+                                <div class="text-muted small fw-medium">Created Slots</div>
+                                <div class="h3 fw-bold mb-0" style="color: #5E8B7E;">{{ examinerStats.created_slots_count }}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-6">
+                            <div class="stat-card shadow-sm py-3">
+                                <div class="text-muted small fw-medium">Booked Students</div>
+                                <div class="h3 fw-bold mb-0" style="color: #6C7A89;">{{ examinerStats.total_students_booked }}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-6">
+                            <div class="stat-card shadow-sm py-3">
+                                <div class="text-muted small fw-medium">Pending Evaluations</div>
+                                <div class="h3 fw-bold mb-0" style="color: #C97A7E;">{{ examinerStats.pending_evaluations }}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row g-4">
+                        <!-- Slot Creation Form -->
+                        <div class="col-lg-4">
+                            <div class="portal-card shadow-sm h-100">
+                                <div class="portal-card-header header-slate">Create Examination Slot</div>
+                                <div class="card-body p-4">
+                                    <div v-if="availableExams.length === 0" class="text-muted small">
+                                        No examinations are currently in the <strong>Slot Creation</strong> phase.
+                                    </div>
+                                    <form v-else @submit.prevent="createSlot">
+                                        <div class="mb-3">
+                                            <label class="form-label text-muted small fw-semibold">Examination</label>
+                                            <select class="form-select" v-model="slotForm.examination_id" required>
+                                                <option disabled value="">Select an examination</option>
+                                                <option v-for="e in availableExams" :key="e.id" :value="e.id">
+                                                    {{ e.course_code }} â€” {{ e.examination_name }} ({{ e.exam_type }}, {{ e.duration }}m)
+                                                </option>
+                                            </select>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label text-muted small fw-semibold">Date</label>
+                                            <input type="date" class="form-control" v-model="slotForm.slot_date" :min="todayStr" required>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-6 mb-3">
+                                                <label class="form-label text-muted small fw-semibold">Start</label>
+                                                <input type="time" class="form-control" v-model="slotForm.start_time" required>
+                                            </div>
+                                            <div class="col-6 mb-3">
+                                                <label class="form-label text-muted small fw-semibold">End</label>
+                                                <input type="time" class="form-control" v-model="slotForm.end_time" required>
+                                            </div>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label text-muted small fw-semibold">Maximum Capacity</label>
+                                            <input type="number" class="form-control" v-model.number="slotForm.maximum_capacity" min="1" required>
+                                        </div>
+                                        <button type="submit" class="btn btn-portal-sage w-100" :disabled="slotSubmitting">
+                                            <span v-if="slotSubmitting" class="spinner-border spinner-border-sm me-1"></span>
+                                            Create Slot
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Slots Table -->
+                        <div class="col-lg-8">
+                            <div class="portal-card shadow-sm h-100">
+                                <div class="portal-card-header bg-white d-flex justify-content-between align-items-center py-3">
+                                    <span class="fw-semibold">My Examination Slots</span>
+                                    <button class="btn btn-outline-secondary btn-sm" @click="loadExaminerData">Refresh</button>
+                                </div>
+                                <div class="card-body p-0 table-responsive">
+                                    <table class="table table-hover align-middle mb-0">
+                                        <thead class="table-light">
+                                            <tr class="small text-muted">
+                                                <th>Exam</th>
+                                                <th>Date</th>
+                                                <th>Time</th>
+                                                <th>Booked</th>
+                                                <th>Pending</th>
+                                                <th class="text-end">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr v-for="s in examinerSlots" :key="s.id">
+                                                <td>
+                                                    <div class="fw-semibold">{{ s.course_code }}</div>
+                                                    <div class="small text-muted">{{ s.examination_name }}</div>
+                                                    <span class="badge rounded-pill bg-light text-dark border">{{ s.exam_status }}</span>
+                                                </td>
+                                                <td>{{ s.slot_date }}</td>
+                                                <td class="small">{{ s.start_time }} â€“ {{ s.end_time }}</td>
+                                                <td>{{ s.booked_count }} / {{ s.maximum_capacity }}</td>
+                                                <td>
+                                                    <span class="badge rounded-pill" :style="{ backgroundColor: s.pending_evaluations > 0 ? '#C97A7E' : '#5E8B7E' }">
+                                                        {{ s.pending_evaluations }}
+                                                    </span>
+                                                </td>
+                                                <td class="text-end text-nowrap">
+                                                    <button class="btn btn-portal-primary btn-sm me-1" @click="openEvaluation(s)">View &amp; Evaluate Students</button>
+                                                    <button v-if="s.booked_count === 0" class="btn btn-outline-danger btn-sm" @click="deleteSlot(s.id)">Delete</button>
+                                                </td>
+                                            </tr>
+                                            <tr v-if="examinerSlots.length === 0">
+                                                <td colspan="6" class="text-center text-muted py-4">You have not created any slots yet.</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -489,6 +606,81 @@
                 </div>
             </div>
         </div>
+
+        <!-- MODAL: VIEW & EVALUATE STUDENTS -->
+        <div v-if="showEvalModal" class="modal fade show d-block" tabindex="-1" style="background: rgba(15,23,42,0.45);">
+            <div class="modal-dialog modal-xl modal-dialog-scrollable">
+                <div class="modal-content border-0 shadow">
+                    <div class="modal-header">
+                        <div>
+                            <h6 class="modal-title fw-semibold mb-0">{{ evalData.examination_name || 'Loadingâ€¦' }}</h6>
+                            <div class="small text-muted" v-if="evalSlot">
+                                {{ evalSlot.slot_date }} Â· {{ evalSlot.start_time }} â€“ {{ evalSlot.end_time }} Â· Max Marks: {{ evalData.maximum_marks }}
+                            </div>
+                        </div>
+                        <button type="button" class="btn-close" @click="closeEvaluation"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div v-if="evalLoading" class="text-center py-4"><span class="spinner-border" style="color: #4F6D7A;"></span></div>
+                        <template v-else>
+                            <div v-if="evalData.rubrics && evalData.rubrics.length" class="mb-3">
+                                <div class="small text-muted fw-semibold mb-1">Rubric Criteria</div>
+                                <span v-for="r in evalData.rubrics" :key="r.id" class="badge text-bg-light border me-1 mb-1">
+                                    {{ r.criterion_name }} ({{ r.maximum_marks }})
+                                </span>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table align-middle mb-0">
+                                    <thead class="table-light">
+                                        <tr class="small text-muted">
+                                            <th>Student</th>
+                                            <th>Status</th>
+                                            <th style="width: 130px;">Marks</th>
+                                            <th>Remarks</th>
+                                            <th class="text-end">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr v-for="b in evalData.bookings" :key="b.booking_id">
+                                            <td>
+                                                <div class="fw-semibold">{{ b.student_name }}</div>
+                                                <div class="small text-muted">{{ b.student_email }}</div>
+                                            </td>
+                                            <td>
+                                                <span class="badge rounded-pill" :style="{ backgroundColor: b.evaluated ? '#5E8B7E' : (b.status === 'Cancelled' ? '#94A3B8' : '#C97A7E') }">
+                                                    {{ b.evaluated ? 'Evaluated' : b.status }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <input type="number" class="form-control form-control-sm" v-model="evalInputs[b.booking_id].total_marks"
+                                                       min="0" :max="evalData.maximum_marks" step="0.5" :disabled="b.status === 'Cancelled'">
+                                            </td>
+                                            <td>
+                                                <textarea class="form-control form-control-sm" rows="1" v-model="evalInputs[b.booking_id].remarks"
+                                                          maxlength="2000" placeholder="Feedback" :disabled="b.status === 'Cancelled'"></textarea>
+                                            </td>
+                                            <td class="text-end">
+                                                <button class="btn btn-portal-sage btn-sm" :disabled="b.status === 'Cancelled' || evalInputs[b.booking_id].saving"
+                                                        @click="submitEvaluation(b)">
+                                                    <span v-if="evalInputs[b.booking_id].saving" class="spinner-border spinner-border-sm me-1"></span>
+                                                    {{ b.evaluated ? 'Update' : 'Submit' }}
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        <tr v-if="!evalData.bookings || evalData.bookings.length === 0">
+                                            <td colspan="5" class="text-center text-muted py-4">No students have booked this slot yet.</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </template>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" @click="closeEvaluation">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
     {% endraw %}
 
@@ -519,8 +711,23 @@
 
                     courseForm: { course_code: '', course_name: '', description: '' },
                     examForm: { course_id: '', examination_name: '', exam_type: 'Viva', duration: 30, maximum_marks: 100 },
-                    examinerForm: { name: '', email: '', password: '' }
+                    examinerForm: { name: '', email: '', password: '' },
+
+                    // Examiner workspace
+                    examinerStats: { open_exams_count: 0, created_slots_count: 0, total_students_booked: 0, pending_evaluations: 0 },
+                    availableExams: [],
+                    examinerSlots: [],
+                    slotForm: { examination_id: '', slot_date: '', start_time: '', end_time: '', maximum_capacity: 5 },
+                    slotSubmitting: false,
+                    showEvalModal: false,
+                    evalLoading: false,
+                    evalSlot: null,
+                    evalData: { bookings: [], rubrics: [] },
+                    evalInputs: {}
                 };
+            },
+            computed: {
+                todayStr() { const d = new Date(); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10); }
             },
             mounted() {
                 if (this.token) {
@@ -551,6 +758,8 @@
 
                         if (this.currentUser.role === 'Admin') {
                             this.loadAdminData();
+                        } else if (this.currentUser.role === 'Examiner') {
+                            this.loadExaminerData();
                         }
                     } catch (err) {
                         this.showAlert(err.message, 'danger');
@@ -590,9 +799,126 @@
                         this.currentUser = data;
                         if (this.currentUser.role === 'Admin') {
                             this.loadAdminData();
+                        } else if (this.currentUser.role === 'Examiner') {
+                            this.loadExaminerData();
                         }
                     } catch {
                         this.logout();
+                    }
+                },
+                async loadExaminerData() {
+                    try {
+                        const res = await fetch('/api/examiner/dashboard', {
+                            headers: { 'Authorization': `Bearer ${this.token}` }
+                        });
+                        const data = await res.json();
+                        if (!res.ok) throw new Error(data.error || data.msg || 'Failed to load examiner dashboard');
+                        this.examinerStats = data.stats;
+                        this.availableExams = data.available_exams;
+                        this.examinerSlots = data.slots;
+                    } catch (err) {
+                        this.showAlert(err.message, 'danger');
+                    }
+                },
+                async createSlot() {
+                    if (this.slotForm.start_time >= this.slotForm.end_time) {
+                        this.showAlert('End time must be after start time.', 'warning');
+                        return;
+                    }
+                    this.slotSubmitting = true;
+                    try {
+                        const res = await fetch('/api/examiner/slots', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${this.token}` },
+                            body: JSON.stringify(this.slotForm)
+                        });
+                        const data = await res.json();
+                        if (!res.ok) throw new Error(data.error || 'Unable to create slot');
+                        this.showAlert(data.message, 'success');
+                        this.slotForm = { examination_id: this.slotForm.examination_id, slot_date: '', start_time: '', end_time: '', maximum_capacity: 5 };
+                        this.loadExaminerData();
+                    } catch (err) {
+                        this.showAlert(err.message, 'danger');
+                    } finally {
+                        this.slotSubmitting = false;
+                    }
+                },
+                async deleteSlot(id) {
+                    if (!confirm('Delete this examination slot?')) return;
+                    try {
+                        const res = await fetch(`/api/examiner/slots/${id}`, {
+                            method: 'DELETE',
+                            headers: { 'Authorization': `Bearer ${this.token}` }
+                        });
+                        const data = await res.json();
+                        if (!res.ok) throw new Error(data.error || 'Unable to delete slot');
+                        this.showAlert(data.message, 'success');
+                        this.loadExaminerData();
+                    } catch (err) {
+                        this.showAlert(err.message, 'danger');
+                    }
+                },
+                async openEvaluation(slot) {
+                    this.evalSlot = slot;
+                    this.showEvalModal = true;
+                    await this.loadSlotBookings(slot.id);
+                },
+                async loadSlotBookings(slotId) {
+                    this.evalLoading = true;
+                    try {
+                        const res = await fetch(`/api/examiner/slots/${slotId}/bookings`, {
+                            headers: { 'Authorization': `Bearer ${this.token}` }
+                        });
+                        const data = await res.json();
+                        if (!res.ok) throw new Error(data.error || 'Unable to load bookings');
+                        const inputs = {};
+                        data.bookings.forEach(b => {
+                            inputs[b.booking_id] = {
+                                total_marks: b.marks_obtained !== null ? b.marks_obtained : '',
+                                remarks: b.remarks || '',
+                                saving: false
+                            };
+                        });
+                        this.evalInputs = inputs;
+                        this.evalData = data;
+                    } catch (err) {
+                        this.showAlert(err.message, 'danger');
+                        this.closeEvaluation();
+                    } finally {
+                        this.evalLoading = false;
+                    }
+                },
+                closeEvaluation() {
+                    this.showEvalModal = false;
+                    this.evalSlot = null;
+                    this.evalData = { bookings: [], rubrics: [] };
+                    this.evalInputs = {};
+                },
+                async submitEvaluation(b) {
+                    const input = this.evalInputs[b.booking_id];
+                    const marks = parseFloat(input.total_marks);
+                    const max = this.evalData.maximum_marks;
+                    if (isNaN(marks) || marks < 0 || marks > max) {
+                        this.showAlert(`Marks must be between 0 and ${max}.`, 'warning');
+                        return;
+                    }
+                    input.saving = true;
+                    try {
+                        const res = await fetch(`/api/examiner/bookings/${b.booking_id}/evaluate`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${this.token}` },
+                            body: JSON.stringify({ total_marks: marks, remarks: input.remarks })
+                        });
+                        const data = await res.json();
+                        if (!res.ok) throw new Error(data.error || 'Evaluation failed');
+                        this.showAlert(`${b.student_name}: ${data.message}`, 'success');
+                        b.evaluated = true;
+                        b.status = 'Completed';
+                        this.loadExaminerData();
+                    } catch (err) {
+                        this.showAlert(err.message, 'danger');
+                    } finally {
+                        input.saving = false;
                     }
                 },
                 async loadAdminData() {
